@@ -1,7 +1,7 @@
 Collection of hacks for the Numark Mixtrack DJ controller for using the
 controller in absurd ways.
 
-== etch-a-sketch.py ==
+## etch-a-sketch.py ##
 
 Emulates an Etch-A-Sketch(R).
 
