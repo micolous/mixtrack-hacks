@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 party_hard.py - Party Hard mode.
-Copyright 2011 Michael Farrell <http://micolous.id.au/>
+Copyright 2011, 2018 Michael Farrell <http://micolous.id.au/>
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -22,49 +22,33 @@ from sys import exit
 from random import randint
 
 try:
-	import pypm
+    import mido
 except ImportError:
-	print "Please install pyPortMidi >0.0.7 from https://bitbucket.org/aalex/pyportmidi/downloads"
-	exit(1)
-
-
-# open midi controller
-pypm.Initialize()
-
-# find the dj hero controller
-in_controller_id = out_controller_id = None
-for x in range(pypm.CountDevices()):
-	interf,name,inp,outp,opened = pypm.GetDeviceInfo(x)
-	if 'Numark Mix Track MIDI' in name:
-		if inp:
-			in_controller_id = x
-		if outp:
-			out_controller_id = x
-		if in_controller_id != None and out_controller_id != None:
-			break
-			
-if in_controller_id == None or out_controller_id == None:
-	print "Couldn't find the Numark Mixtrack controller.  Is it plugged in?"
-	exit(1)
-
-# we have the controller id, lets open it
-midi_in = pypm.Input(in_controller_id)
-midi_out = pypm.Output(out_controller_id)
+    print("Please install mido and python-rtmidi:")
+    print("  pip3 install mido python-rtmidi")
+    exit(1)
 
 state = [False] * 128
 
-print "Press ^C to end the party..."
+with mido.open_output('Numark Mix Track') as midi_out:
+    print("Press ^C to end the party...")
 
-try:
-	while True:
-		x = randint(0, 127)
-		state[x] = not state[x]		
-		midi_out.Write([[[0x90, x, (state[x] and 100) or 0], pypm.Time()]])
-except KeyboardInterrupt:
-	pass
+    try:
+        while True:
+            x = randint(0, 127)
+            state[x] = not state[x]
+            msg = mido.Message('note_on',
+                               note=x,
+                               velocity=100 if state[x] else 0)
+            midi_out.send(msg)
+    except KeyboardInterrupt:
+        pass
 
-for x in range(128):
-	midi_out.Write([[[0x90, x, 0], pypm.Time()]])
+    for x in range(128):
+        msg = mido.Message('note_off',
+                           note=x,
+                           velocity=0)
+        midi_out.send(msg)
 
-print "It's all fun and games until the cops show up."
+print("It's all fun and games until the cops show up.")
 
