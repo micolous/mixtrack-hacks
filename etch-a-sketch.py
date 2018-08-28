@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from sys import exit
 from colorsys import hsv_to_rgb
+from threading import Lock
 
 try:
     import mido
@@ -45,7 +46,7 @@ class EtchController:
         self._update_rgb_indicator()
     
     def midi_callback(self, msg):
-        print('got message:', msg)
+        #print('got message:', msg)
         if msg.type == 'note_on':
             # Button press / release event
             if msg.velocity == 127:
@@ -56,6 +57,10 @@ class EtchController:
                 elif msg.note == 102: # Right Cue (HSV mode)
                     self.rgb = False
                     self._update_rgb_indicator()
+                elif msg.note == 105: # Back (clear screen)
+                    self.turtle.clear()
+                else:
+                    print(msg)
             elif msg.velocity == 0:
                 # Release
                 pass
@@ -123,12 +128,18 @@ class Turtle:
         self.pen_size = 1
         self.rgb = True
         self.pen_colour = None
+        self.update_rect = None
         self._update_colour()
 
-        self.draw = False
         pygame.display.init()
-        self.screen = pygame.display.set_mode((self.width, self.height), False)
-        self.screen.fill((255, 255, 255))
+        self.screen = pygame.display.set_mode((self.width, self.height), True)
+        self.screen_size = pygame.Rect(0, 0, self.width, self.height)
+        pygame.display.set_caption('etch-a-sketch')
+        self.canvas = pygame.Surface((self.width, self.height))
+        self.canvas.fill((255, 255, 255))
+        self.update_rect = self.screen_size
+        #self.canvas_lock = Lock()
+
         pygame.display.flip()
 
     def move(self, x=0, y=0):
@@ -136,7 +147,7 @@ class Turtle:
         self.x += x
         self.y += y
         self._clamp_position()
-        self.draw = True
+        self.draw()
         
     def _clamp_position(self):
         if self.x < -self.pen_size:
@@ -162,15 +173,20 @@ class Turtle:
         if 'value' in kwargs:
             self.v = kwargs['value']
         self._update_colour()
-        self.draw = True
+        self.draw()
     
     def colour_mode(self, rgb):
         self.rgb = rgb
-        self.draw = True
+        self.draw()
 
     def size(self, size):
         self.pen_size = size
-        self.draw = True
+        self.draw()
+
+    def clear(self):
+        # clear with fill colour
+        self.canvas.fill(self.pen_colour)
+        self.update_rect = self.screen_size
 
     def _update_colour(self):
         if self.rgb:
@@ -178,19 +194,39 @@ class Turtle:
         else:
             self.pen_colour = pygame.Color(*[int(i*255) for i in hsv_to_rgb(
                                            self.h, self.s, self.v)])
-    
-    def pump(self):
-        running = True
-        if self.draw:
-            pygame.draw.circle(self.screen,
+
+    def draw(self):
+        #self.canvas_lock.acquire()
+        try:
+            pygame.draw.circle(self.canvas,
                                self.pen_colour,
                                (self.x, self.y),
                                self.pen_size)
+            area_rect = pygame.Rect(
+                self.x - self.pen_size,
+                self.y - self.pen_size,
+                self.pen_size * 2,
+                self.pen_size * 2)
+            area_rect.clip(self.screen_size)
+            
+            if self.update_rect is None:
+                self.update_rect = area_rect
+            else:
+                self.update_rect.union_ip(area_rect)
+        finally: pass
+            #self.canvas_lock.release()
+    
+    def pump(self):
+        running = True
+        if self.update_rect:
+            r, self.update_rect = self.update_rect, None
+            p = self.canvas.subsurface(r)
+            self.screen.blit(p, r)
 
-            pygame.display.flip()
-            pygame.event.pump()
-            self.draw = False
-        
+            pygame.display.update(r)
+
+        pygame.event.pump()
+
         if pygame.event.peek():
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -202,7 +238,7 @@ class Turtle:
 
 
 # Screen resolution
-turtle = Turtle(1024, 600)
+turtle = Turtle(1680, 1050)
 controller = EtchController(turtle)
 running = True
 
