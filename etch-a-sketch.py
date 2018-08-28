@@ -129,6 +129,13 @@ class Turtle:
         self.rgb = True
         self.pen_colour = None
         self.update_rect = None
+        
+        pygame.font.init()
+        self.ui_font = pygame.font.SysFont(name=pygame.font.match_font('arial'),
+                                           size=30)
+        self.ui_fg = pygame.Color(0, 0, 0)
+        self.ui_bg = pygame.Color(255, 255, 255)
+        self.last_ui_rect = None
         self._update_colour()
 
         pygame.display.init()
@@ -216,6 +223,22 @@ class Turtle:
         finally: pass
             #self.canvas_lock.release()
     
+    def draw_ui(self):
+        if self.last_ui_rect is not None:
+            self.screen.fill(self.ui_bg, self.last_ui_rect)
+        
+        l = self.ui_font.render(
+            '%d,%d s%d r%d g%d b%d' % (self.x, self.y, self.pen_size,
+                                       self.pen_colour.r,
+                                       self.pen_colour.g,
+                                       self.pen_colour.b),
+            True, self.ui_fg, self.ui_bg
+        )
+        
+        self.screen.blit(l, (0, 0))
+        self.last_ui_rect = l.get_rect()
+        pygame.display.update(self.last_ui_rect)
+    
     def pump(self):
         running = True
         if self.update_rect:
@@ -224,6 +247,8 @@ class Turtle:
             self.screen.blit(p, r)
 
             pygame.display.update(r)
+
+            self.draw_ui()
 
         pygame.event.pump()
 
