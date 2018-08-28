@@ -37,13 +37,20 @@ except ImportError:
 fullscreen = False
 
 class EtchController:
-    def __init__(self, turtle):
+    def __init__(self, turtle, cb=False):
         self.turtle = turtle
-        self.midi_in = mido.open_input('Numark Mix Track', callback=self.midi_callback)
+        if cb:
+            self.midi_in = mido.open_input('Numark Mix Track', callback=self.midi_callback)
+        else:
+            self.midi_in = mido.open_input('Numark Mix Track')
         self.midi_out = mido.open_output('Numark Mix Track')
         self.rgb = True
         self.size = 1
         self._update_rgb_indicator()
+    
+    def pump(self):
+        for msg in self.midi_in.iter_pending():
+            self.midi_callback(msg)
     
     def midi_callback(self, msg):
         #print('got message:', msg)
@@ -129,6 +136,8 @@ class Turtle:
         self.rgb = True
         self.pen_colour = None
         self.update_rect = None
+        self.fps = 50
+        self.clock = pygame.time.Clock()
         
         pygame.font.init()
         self.ui_font = pygame.font.SysFont(name=pygame.font.match_font('arial'),
@@ -139,10 +148,12 @@ class Turtle:
         self._update_colour()
 
         pygame.display.init()
-        self.screen = pygame.display.set_mode((self.width, self.height), True)
+        self.screen = pygame.display.set_mode((self.width, self.height),
+                                              pygame.HWSURFACE | pygame.FULLSCREEN | pygame.DOUBLEBUF)
         self.screen_size = pygame.Rect(0, 0, self.width, self.height)
         pygame.display.set_caption('etch-a-sketch')
-        self.canvas = pygame.Surface((self.width, self.height))
+        self.canvas = pygame.Surface((self.width, self.height),
+                                     flags=pygame.HWSURFACE)
         self.canvas.fill((255, 255, 255))
         self.update_rect = self.screen_size
         #self.canvas_lock = Lock()
@@ -214,12 +225,13 @@ class Turtle:
                 self.y - self.pen_size,
                 self.pen_size * 2,
                 self.pen_size * 2)
-            area_rect.clip(self.screen_size)
             
             if self.update_rect is None:
                 self.update_rect = area_rect
             else:
                 self.update_rect.union_ip(area_rect)
+
+            self.update_rect = self.update_rect.clip(self.screen_size)
         finally: pass
             #self.canvas_lock.release()
     
@@ -228,7 +240,9 @@ class Turtle:
             self.screen.fill(self.ui_bg, self.last_ui_rect)
         
         l = self.ui_font.render(
-            '%d,%d s%d r%d g%d b%d' % (self.x, self.y, self.pen_size,
+            '%d fps | %d,%d s%d r%d g%d b%d' % (
+                                       self.clock.get_fps(),
+                                       self.x, self.y, self.pen_size,
                                        self.pen_colour.r,
                                        self.pen_colour.g,
                                        self.pen_colour.b),
@@ -248,7 +262,7 @@ class Turtle:
 
             pygame.display.update(r)
 
-            self.draw_ui()
+        self.draw_ui()
 
         pygame.event.pump()
 
@@ -259,13 +273,16 @@ class Turtle:
                 if event.type == pygame.KEYDOWN:
                     running = False 
 
+        self.clock.tick(self.fps)
         return running
 
+cb = False
 
 # Screen resolution
-turtle = Turtle(1680, 1050)
-controller = EtchController(turtle)
+turtle = Turtle(2560, 1600)
+controller = EtchController(turtle, cb)
 running = True
 
 while running:
+    if not cb: controller.pump()
     running = turtle.pump()
