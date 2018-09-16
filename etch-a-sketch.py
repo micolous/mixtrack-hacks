@@ -125,7 +125,7 @@ class EtchController:
         self.midi_in = self.midi_out = None
 
 class Turtle:
-    def __init__(self, width, height):
+    def __init__(self, width, height, opts):
         self.width = width
         self.height = height
         self.x = self.width // 2
@@ -148,8 +148,7 @@ class Turtle:
         self._update_colour()
 
         pygame.display.init()
-        self.screen = pygame.display.set_mode((self.width, self.height),
-                                              pygame.HWSURFACE | pygame.FULLSCREEN | pygame.DOUBLEBUF)
+        self.screen = pygame.display.set_mode((self.width, self.height), opts)
         self.screen_size = pygame.Rect(0, 0, self.width, self.height)
         pygame.display.set_caption('etch-a-sketch')
         self.canvas = pygame.Surface((self.width, self.height),
@@ -291,8 +290,17 @@ if numark_devname is None:
     print("Couldn't find a Mix Track, exiting.")
     exit(1)
 
-# Screen resolution
-turtle = Turtle(2560, 1600)
+# For PC:
+opts = pygame.HWSURFACE | pygame.FULLSCREEN | pygame.DOUBLEBUF
+# For other
+#opts = pygame.FULLSCREEN
+
+# auto-detect correct resolution
+pygame.display.init()
+display_info = pygame.display.Info()
+print("Display resolution: %dx%d" % (display_info.current_w, display_info.current_h))
+turtle = Turtle(display_info.current_w, display_info.current_h, opts)
+
 controller = EtchController(turtle, numark_devname, cb)
 running = True
 
