@@ -37,13 +37,13 @@ except ImportError:
 fullscreen = False
 
 class EtchController:
-    def __init__(self, turtle, cb=False):
+    def __init__(self, turtle, devname, cb=False):
         self.turtle = turtle
         if cb:
-            self.midi_in = mido.open_input('Numark Mix Track', callback=self.midi_callback)
+            self.midi_in = mido.open_input(devname, callback=self.midi_callback)
         else:
-            self.midi_in = mido.open_input('Numark Mix Track')
-        self.midi_out = mido.open_output('Numark Mix Track')
+            self.midi_in = mido.open_input(devname)
+        self.midi_out = mido.open_output(devname)
         self.rgb = True
         self.size = 1
         self._update_rgb_indicator()
@@ -278,9 +278,22 @@ class Turtle:
 
 cb = False
 
+devices = mido.get_ioport_names()
+numark_devname = None
+print('MIDI devices:')
+for device in devices:
+    print('* ' + device)
+    if device.startswith('Numark Mix Track'):
+      print('  Mix Track found!')
+      numark_devname = device
+
+if numark_devname is None:
+    print("Couldn't find a Mix Track, exiting.")
+    exit(1)
+
 # Screen resolution
 turtle = Turtle(2560, 1600)
-controller = EtchController(turtle, cb)
+controller = EtchController(turtle, numark_devname, cb)
 running = True
 
 while running:
