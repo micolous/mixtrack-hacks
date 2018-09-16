@@ -56,7 +56,7 @@ with mido.open_output(device) as midi_out:
                                note=x,
                                velocity=100 if state[x] else 0)
             midi_out.send(msg)
-            toggles += 1L
+            toggles += 1
     except KeyboardInterrupt:
         pass
     end = time()
