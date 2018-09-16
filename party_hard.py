@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- mode: python; indent-tabs-mode: nil; tab-width: 4 -*-
 """
 party_hard.py - Party Hard mode.
 Copyright 2011, 2018 Michael Farrell <http://micolous.id.au/>
@@ -28,8 +29,20 @@ except ImportError:
     exit(1)
 
 state = [False] * 128
+devices = mido.get_ioport_names()
+numark_devname = None
+print('MIDI devices:')
+for device in devices:
+    print('* ' + device)
+    if device.startswith('Numark Mix Track'):
+      print('  Mix Track found!')
+      numark_devname = device
 
-with mido.open_output('Numark Mix Track') as midi_out:
+if numark_devname is None:
+    print("Couldn't find a Mix Track, exiting.")
+    exit(1)
+
+with mido.open_output(device) as midi_out:
     print("Press ^C to end the party...")
 
     try:
