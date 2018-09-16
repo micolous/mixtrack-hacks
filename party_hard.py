@@ -46,7 +46,7 @@ if numark_devname is None:
 with mido.open_output(device) as midi_out:
     print("Press ^C to end the party...")
 
-    toggles = 0L
+    toggles = 0
     start = time()
     try:
         while True:
