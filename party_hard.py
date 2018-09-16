@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from sys import exit
 from random import randint
+from time import time
 
 try:
     import mido
@@ -45,6 +46,8 @@ if numark_devname is None:
 with mido.open_output(device) as midi_out:
     print("Press ^C to end the party...")
 
+    toggles = 0L
+    start = time()
     try:
         while True:
             x = randint(0, 127)
@@ -53,14 +56,18 @@ with mido.open_output(device) as midi_out:
                                note=x,
                                velocity=100 if state[x] else 0)
             midi_out.send(msg)
+            toggles += 1L
     except KeyboardInterrupt:
         pass
+    end = time()
 
     for x in range(128):
         msg = mido.Message('note_off',
                            note=x,
                            velocity=0)
         midi_out.send(msg)
+    
+    duration = end - start
+    print("Toggled %d time(s) in %.2f seconds (%.2f/sec)" % (toggles, duration, float(toggles)/duration))
 
-print("It's all fun and games until the cops show up.")
 
